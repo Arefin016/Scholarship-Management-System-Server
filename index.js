@@ -25,9 +25,9 @@ async function run() {
     // Connect the client to the server	(optional starting in v4.7)
     await client.connect()
 
-    const topScholarshipCollection = client
-      .db("scholarshipDb")
-      .collection("topScholarship")
+    // cart = submit
+    const topScholarshipCollection = client.db("scholarshipDb").collection("topScholarship")
+    const submitCollection = client.db("scholarshipDb").collection("submits")
 
     app.get("/topScholarship", async (req, res) => {
       const result = await topScholarshipCollection.find().toArray()
@@ -53,6 +53,28 @@ async function run() {
       const result = await topScholarshipCollection.findOne(query, options)
       res.send(result)
     })
+
+
+    //submit collection
+
+    app.get('/submits', async(req, res) => {
+      const email = req.query.email;
+      const query = {email: email};
+      const result = await submitCollection.find(query).toArray();
+      res.send(result);
+    })
+
+
+    app.post('/submits', async(req, res) => {
+      const submitItem = req.body;
+      const result = await submitCollection.insertOne(submitItem);
+      res.send(result)
+    })
+
+
+
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 })
