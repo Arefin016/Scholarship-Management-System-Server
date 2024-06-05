@@ -26,19 +26,25 @@ async function run() {
     await client.connect()
 
     // cart = submit
-    const topScholarshipCollection = client.db("scholarshipDb").collection("topScholarship")
+    const topScholarshipCollection = client
+      .db("scholarshipDb")
+      .collection("topScholarship")
     const submitCollection = client.db("scholarshipDb").collection("submits")
     const userCollection = client.db("scholarshipDb").collection("users")
 
     //User related api
-    app.post('/users', async(req, res) => {
-      const user = req.body;
-      const result = await userCollection.insertOne(user);
-      res.send(result);
+    app.post("/users", async (req, res) => {
+      const user = req.body
+      //insert email if user does not exits:
+      //You can do this many ways (1. email unique, 2.upsert, 3.simple checking)
+      const query = { email: user.email }
+      const existingUser = await userCollection.findOne(query)
+      if (existingUser) {
+        return res.send({ message: "User already exists", insertedId: null })
+      }
+      const result = await userCollection.insertOne(user)
+      res.send(result)
     })
-
-
-
 
     app.get("/topScholarship", async (req, res) => {
       const result = await topScholarshipCollection.find().toArray()
@@ -65,34 +71,27 @@ async function run() {
       res.send(result)
     })
 
-
     //submit collection
     // carts = submits
-    app.get('/submits', async(req, res) => {
-      const email = req.query.email;
-      const query = {email: email};
-      const result = await submitCollection.find(query).toArray();
-      res.send(result);
-    })
-
-
-    app.post('/submits', async(req, res) => {
-      const submitItem = req.body;
-      const result = await submitCollection.insertOne(submitItem);
+    app.get("/submits", async (req, res) => {
+      const email = req.query.email
+      const query = { email: email }
+      const result = await submitCollection.find(query).toArray()
       res.send(result)
     })
 
-    app.delete('/submits/:id', async(req, res) => {
-      const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
-      const result = await submitCollection.deleteOne(query)
-      res.send(result);
+    app.post("/submits", async (req, res) => {
+      const submitItem = req.body
+      const result = await submitCollection.insertOne(submitItem)
+      res.send(result)
     })
 
-
-
-
-
+    app.delete("/submits/:id", async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await submitCollection.deleteOne(query)
+      res.send(result)
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 })
