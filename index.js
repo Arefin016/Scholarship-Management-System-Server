@@ -33,6 +33,7 @@ async function run() {
       .collection("topScholarship")
     const submitCollection = client.db("scholarshipDb").collection("submits")
     const userCollection = client.db("scholarshipDb").collection("users")
+    const addScholarshipCollection = client.db("scholarshipDb").collection("addScholarship")
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -184,6 +185,13 @@ async function run() {
       const query = { _id: new ObjectId(id) }
       const result = await submitCollection.deleteOne(query)
       res.send(result)
+    })
+
+    //add Scholarship
+    app.post('/addScholarship', verifyToken, verifyAdmin, async(req, res) => {
+      const scholarship = req.body;
+      const result = await addScholarshipCollection.insertOne(scholarship);
+      res.send(result);
     })
 
     // Send a ping to confirm a successful connection
