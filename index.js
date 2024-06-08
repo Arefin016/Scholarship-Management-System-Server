@@ -145,6 +145,30 @@ async function run() {
       res.send(result)
     })
 
+    app.patch('/topScholarship/:id', async(req, res) => {
+      const item = req.body;
+      const id = req.params.id;
+      const filter = {_id: new ObjectId(id)}
+      const updatedDoc = {
+        $set: {
+          applicationFees: item.applicationFees,
+          degreeCategory: item.degreeCategory,
+          scholarshipCategory: item.scholarshipCategory,
+          subjectCategory: item.subjectCategory,
+          universityName: item.universityName
+        }
+      }
+       const result = await topScholarshipCollection.updateOne(filter, updatedDoc)
+       res.send(result);
+    })
+
+    app.delete('/topScholarship/:id', verifyToken, verifyAdmin, async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await topScholarshipCollection.deleteOne(query);
+      res.send(result);
+    })
+
     app.get("/topScholarship/:id", async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
@@ -169,7 +193,11 @@ async function run() {
     // carts = submits
     app.get("/submits", async (req, res) => {
       const email = req.query.email
-      const query = { email: email }
+      let query = {}
+      if(email){
+        query = {email}
+      }
+      console.log(query)
       const result = await submitCollection.find(query).toArray()
       res.send(result)
     })
@@ -192,6 +220,11 @@ async function run() {
       const scholarship = req.body;
       const result = await addScholarshipCollection.insertOne(scholarship);
       res.send(result);
+    })
+
+    app.get("/addScholarship", async (req, res) => {
+      const result = await addScholarshipCollection.find().toArray()
+      res.send(result)
     })
 
     // Send a ping to confirm a successful connection
