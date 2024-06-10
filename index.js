@@ -34,6 +34,7 @@ async function run() {
     const submitCollection = client.db("scholarshipDb").collection("submits")
     const userCollection = client.db("scholarshipDb").collection("users")
     const addScholarshipCollection = client.db("scholarshipDb").collection("addScholarship")
+    const paymentCollection = client.db("scholarshipDb").collection("payments")
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -141,8 +142,24 @@ async function run() {
 
     //Top Scholarship Related
     app.get("/topScholarship", async (req, res) => {
-      const result = await topScholarshipCollection.find().toArray()
+      const page = parseInt(req.query.page);
+      const size = parseInt(req.query.size);
+      const filter = req.query;
+      console.log(filter)
+      console.log('pagination query',page, size);
+      const query = {
+        universityName : {$regex: filter.search, $options: 'i'}
+      }
+      const cursor = topScholarshipCollection.find(query)
+      .skip(page * size)
+      .limit(size)
+      const result = await cursor.toArray();
       res.send(result)
+    })
+
+    app.get('/topScholarshipCount', async(req, res) => {
+      const count = await topScholarshipCollection.estimatedDocumentCount();
+      res.send({count})
     })
 
     app.patch('/topScholarship/:id', async(req, res) => {
@@ -244,6 +261,17 @@ async function run() {
       })
     })
 
+    app.post('/payments', async(req, res) => {
+      const payment = req.body;
+      const paymentResult = await paymentCollection.insertOne(payment);
+      //carefully delete each item from the cart
+      console.log('payment info', payment);
+      const query ={_id: {
+        $in: payment.submitIds.map(id => new ObjectId(id))
+      }};
+      const deleteResult = await submitCollection.deleteMany(query)
+      res.send({paymentResult, deleteResult})
+    })
 
 
 
