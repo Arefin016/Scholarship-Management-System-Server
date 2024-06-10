@@ -4,7 +4,7 @@ const cors = require("cors")
 const jwt = require("jsonwebtoken")
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb")
 require("dotenv").config()
-const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+const stripe = require("stripe")(process.env.STRIPE_SECRET_KEY)
 const port = process.env.PORT || 5000
 
 //middlewares
@@ -33,7 +33,9 @@ async function run() {
       .collection("topScholarship")
     const submitCollection = client.db("scholarshipDb").collection("submits")
     const userCollection = client.db("scholarshipDb").collection("users")
-    const addScholarshipCollection = client.db("scholarshipDb").collection("addScholarship")
+    const addScholarshipCollection = client
+      .db("scholarshipDb")
+      .collection("addScholarship")
     const paymentCollection = client.db("scholarshipDb").collection("payments")
 
     //jwt related api
@@ -72,9 +74,20 @@ async function run() {
       }
       next()
     }
+    // use verify moderator after verifyToken
+    // const verifyModerator = async (req, res, next) => {
+    //   const email = req.decoded.email
+    //   const query = { email: email }
+    //   const user = await userCollection.findOne(query)
+    //   const isModerator = user?.role === "moderator"
+    //   if (!isModerator) {
+    //     return res.status(403).send({ message: "forbidden access" })
+    //   }
+    //   next()
+    // }
 
     //Users related api
-    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin ,async (req, res) => {
       const result = await userCollection.find().toArray()
       res.send(result)
     })
@@ -91,6 +104,19 @@ async function run() {
         admin = user?.role === "admin"
       }
       res.send({ admin })
+    })
+    app.get("/users/moderator/:email", verifyToken, async (req, res) => {
+      const email = req.params.email
+      if (email !== req.decoded.email) {
+        return res.status(403).send({ message: "forbidden access" })
+      }
+      const query = { email: email }
+      const user = await userCollection.findOne(query)
+      let moderator = false
+      if (user) {
+        moderator = user?.role === "moderator"
+      }
+      res.send({ moderator })
     })
 
     app.post("/users", async (req, res) => {
@@ -121,19 +147,23 @@ async function run() {
       }
     )
 
-    app.patch("/users/moderator/:id", async (req, res) => {
-      const id = req.params.id
-      const filter = { _id: new ObjectId(id) }
-      const updatedDoc = {
-        $set: {
-          role: "moderator",
-        },
+    app.patch(
+      "/users/moderator/:id",
+      verifyToken,
+      async (req, res) => {
+        const id = req.params.id
+        const filter = { _id: new ObjectId(id) }
+        const updatedDoc = {
+          $set: {
+            role: "moderator",
+          },
+        }
+        const result = await userCollection.updateOne(filter, updatedDoc)
+        res.send(result)
       }
-      const result = await userCollection.updateOne(filter, updatedDoc)
-      res.send(result)
-    })
+    )
 
-    app.delete("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
+    app.delete("/users/:id", verifyToken, verifyAdmin ,async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await userCollection.deleteOne(query)
@@ -142,49 +172,59 @@ async function run() {
 
     //Top Scholarship Related
     app.get("/topScholarship", async (req, res) => {
-      const page = parseInt(req.query.page);
-      const size = parseInt(req.query.size);
-      const filter = req.query;
+      const page = parseInt(req.query.page)
+      const size = parseInt(req.query.size)
+      const filter = req.query
       console.log(filter)
-      console.log('pagination query',page, size);
+      console.log("pagination query", page, size)
       const query = {
-        universityName : {$regex: filter.search, $options: 'i'}
+        universityName: { $regex: `${filter.search}`, $options: "i" },
+        // {"firstname": {$regex: `${thename}`, $options: 'i'}},
       }
-      const cursor = topScholarshipCollection.find(query)
-      .skip(page * size)
-      .limit(size)
-      const result = await cursor.toArray();
+      const cursor = topScholarshipCollection
+        .find(query)
+        .skip(page * size)
+        .limit(size)
+      const result = await cursor.toArray()
       res.send(result)
     })
 
-    app.get('/topScholarshipCount', async(req, res) => {
-      const count = await topScholarshipCollection.estimatedDocumentCount();
-      res.send({count})
+    app.get("/topScholarshipCount", async (req, res) => {
+      const count = await topScholarshipCollection.estimatedDocumentCount()
+      res.send({ count })
     })
 
-    app.patch('/topScholarship/:id', async(req, res) => {
-      const item = req.body;
-      const id = req.params.id;
-      const filter = {_id: new ObjectId(id)}
+    app.patch("/topScholarship/:id", async (req, res) => {
+      const item = req.body
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
       const updatedDoc = {
         $set: {
           applicationFees: item.applicationFees,
           degreeCategory: item.degreeCategory,
           scholarshipCategory: item.scholarshipCategory,
           subjectCategory: item.subjectCategory,
-          universityName: item.universityName
-        }
+          universityName: item.universityName,
+        },
       }
-       const result = await topScholarshipCollection.updateOne(filter, updatedDoc)
-       res.send(result);
+      const result = await topScholarshipCollection.updateOne(
+        filter,
+        updatedDoc
+      )
+      res.send(result)
     })
 
-    app.delete('/topScholarship/:id', verifyToken, verifyAdmin, async(req, res) => {
-      const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
-      const result = await topScholarshipCollection.deleteOne(query);
-      res.send(result);
-    })
+    app.delete(
+      "/topScholarship/:id",
+      verifyToken,
+      verifyAdmin,
+      async (req, res) => {
+        const id = req.params.id
+        const query = { _id: new ObjectId(id) }
+        const result = await topScholarshipCollection.deleteOne(query)
+        res.send(result)
+      }
+    )
 
     app.get("/topScholarship/:id", async (req, res) => {
       const id = req.params.id
@@ -211,8 +251,8 @@ async function run() {
     app.get("/submits", async (req, res) => {
       const email = req.query.email
       let query = {}
-      if(email){
-        query = {email}
+      if (email) {
+        query = { email }
       }
       console.log(query)
       const result = await submitCollection.find(query).toArray()
@@ -233,10 +273,10 @@ async function run() {
     })
 
     //add Scholarship
-    app.post('/addScholarship', verifyToken, verifyAdmin, async(req, res) => {
-      const scholarship = req.body;
-      const result = await addScholarshipCollection.insertOne(scholarship);
-      res.send(result);
+    app.post("/addScholarship", verifyToken, verifyAdmin, async (req, res) => {
+      const scholarship = req.body
+      const result = await addScholarshipCollection.insertOne(scholarship)
+      res.send(result)
     })
 
     app.get("/addScholarship", async (req, res) => {
@@ -244,40 +284,36 @@ async function run() {
       res.send(result)
     })
 
-    //Payment intent 
-    app.post('/create-payment-intent', async(req, res) =>{
-      const {price} = req.body;
-      const amount = parseInt(price * 100);
-      console.log('amount inside the intent',amount)
+    //Payment intent
+    app.post("/create-payment-intent", async (req, res) => {
+      const { price } = req.body
+      const amount = parseInt(price * 100)
+      console.log("amount inside the intent", amount)
 
       const paymentIntent = await stripe.paymentIntents.create({
         amount: amount,
-        currency: 'usd',
-        payment_method_types: ['card']
-      });
+        currency: "usd",
+        payment_method_types: ["card"],
+      })
 
       res.send({
-        clientSecret: paymentIntent.client_secret
+        clientSecret: paymentIntent.client_secret,
       })
     })
 
-    app.post('/payments', async(req, res) => {
-      const payment = req.body;
-      const paymentResult = await paymentCollection.insertOne(payment);
+    app.post("/payments", async (req, res) => {
+      const payment = req.body
+      const paymentResult = await paymentCollection.insertOne(payment)
       //carefully delete each item from the cart
-      console.log('payment info', payment);
-      const query ={_id: {
-        $in: payment.submitIds.map(id => new ObjectId(id))
-      }};
+      console.log("payment info", payment)
+      const query = {
+        _id: {
+          $in: payment.submitIds.map((id) => new ObjectId(id)),
+        },
+      }
       const deleteResult = await submitCollection.deleteMany(query)
-      res.send({paymentResult, deleteResult})
+      res.send({ paymentResult, deleteResult })
     })
-
-
-
-
-
-
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 })
