@@ -37,6 +37,7 @@ async function run() {
       .db("scholarshipDb")
       .collection("addScholarship")
     const paymentCollection = client.db("scholarshipDb").collection("payments")
+    const reviewCollection = client.db("scholarshipDb").collection("reviews")
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -172,14 +173,17 @@ async function run() {
 
     //Top Scholarship Related
     app.get("/topScholarship", async (req, res) => {
-      const page = parseInt(req.query.page)
-      const size = parseInt(req.query.size)
+      const page = parseInt(req.query.page || 0)
+      const size = parseInt(req.query.size || 10)
       const filter = req.query
       console.log(filter)
       console.log("pagination query", page, size)
       const query = {
-        universityName: { $regex: `${filter.search}`, $options: "i" },
+        
         // {"firstname": {$regex: `${thename}`, $options: 'i'}},
+      }
+      if(filter.search){
+        query.universityName = { $regex: `${filter.search}`, $options: "i" }
       }
       const cursor = topScholarshipCollection
         .find(query)
@@ -314,6 +318,28 @@ async function run() {
       const deleteResult = await submitCollection.deleteMany(query)
       res.send({ paymentResult, deleteResult })
     })
+
+    //add review
+    app.post('/addReview', async(req, res) => {
+      const item = req.body;
+      const result = await reviewCollection.insertOne(item);
+      res.send(result);
+    })
+
+    app.get("/addReview" ,async (req, res) => {
+      const result = await reviewCollection.find().toArray()
+      res.send(result)
+    })
+
+    app.delete('/addReview/:id', verifyToken, async(req, res) => {
+      const id = req.params.id;
+      const query = {_id: new ObjectId(id)}
+      const result = await reviewCollection.deleteOne(query);
+      res.send(result);
+    })
+
+
+
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 })
