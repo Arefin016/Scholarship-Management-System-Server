@@ -88,7 +88,7 @@ async function run() {
     }
 
     //Users related api
-    app.get("/users", verifyToken, verifyAdmin ,async (req, res) => {
+    app.get("/users", verifyToken, verifyAdmin, async (req, res) => {
       const result = await userCollection.find().toArray()
       res.send(result)
     })
@@ -106,6 +106,7 @@ async function run() {
       }
       res.send({ admin })
     })
+
     app.get("/users/moderator/:email", verifyToken, async (req, res) => {
       const email = req.params.email
       if (email !== req.decoded.email) {
@@ -151,6 +152,7 @@ async function run() {
     app.patch(
       "/users/moderator/:id",
       verifyToken,
+      verifyModerator,
       async (req, res) => {
         const id = req.params.id
         const filter = { _id: new ObjectId(id) }
@@ -164,7 +166,7 @@ async function run() {
       }
     )
 
-    app.delete("/users/:id", verifyToken, verifyAdmin ,async (req, res) => {
+    app.delete("/users/:id", verifyToken, verifyAdmin, async (req, res) => {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await userCollection.deleteOne(query)
@@ -179,10 +181,9 @@ async function run() {
       console.log(filter)
       console.log("pagination query", page, size)
       const query = {
-        
         // {"firstname": {$regex: `${thename}`, $options: 'i'}},
       }
-      if(filter.search){
+      if (filter.search) {
         query.universityName = { $regex: `${filter.search}`, $options: "i" }
       }
       const cursor = topScholarshipCollection
@@ -320,26 +321,47 @@ async function run() {
     })
 
     //add review
-    app.post('/addReview', async(req, res) => {
-      const item = req.body;
-      const result = await reviewCollection.insertOne(item);
-      res.send(result);
-    })
-
-    app.get("/addReview" ,async (req, res) => {
-      const result = await reviewCollection.find().toArray()
+    app.post("/addReview", async (req, res) => {
+      const item = req.body
+      const result = await reviewCollection.insertOne(item)
       res.send(result)
     })
 
-    app.delete('/addReview/:id', verifyToken, async(req, res) => {
+    app.get("/addReview", async (req, res) => {
+      const result = await reviewCollection.find().toArray()
+      res.send(result)
+    })
+    app.get("/addReview/:id", async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await reviewCollection.findOne(query)
+      res.send(result)
+    })
+
+    app.patch('/addReview/:id', async(req, res) => {
+      const item = req.body;
       const id = req.params.id;
-      const query = {_id: new ObjectId(id)}
-      const result = await reviewCollection.deleteOne(query);
+      const filter = {_id: new ObjectId(id)}
+      const updatedDoc = {
+        $set: {
+          ratingPoint: item.ratingPoint,
+          reviewDate: item.reviewDate,
+          scholarshipName: item.scholarshipName,
+          universityName: item.universityName,
+          reviewComment: item.reviewComment,
+          image: item.image
+        }
+      }
+      const result = await reviewCollection.updateOne(filter, updatedDoc);
       res.send(result);
     })
 
-
-
+    app.delete("/addReview/:id", verifyToken, async (req, res) => {
+      const id = req.params.id
+      const query = { _id: new ObjectId(id) }
+      const result = await reviewCollection.deleteOne(query)
+      res.send(result)
+    })
 
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 })
