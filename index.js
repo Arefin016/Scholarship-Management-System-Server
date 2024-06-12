@@ -76,16 +76,16 @@ async function run() {
       next()
     }
     // use verify moderator after verifyToken
-    // const verifyModerator = async (req, res, next) => {
-    //   const email = req.decoded.email
-    //   const query = { email: email }
-    //   const user = await userCollection.findOne(query)
-    //   const isModerator = user?.role === "moderator"
-    //   if (!isModerator) {
-    //     return res.status(403).send({ message: "forbidden access" })
-    //   }
-    //   next()
-    // }
+    const verifyModerator = async (req, res, next) => {
+      const email = req.decoded.email
+      const query = { email: email }
+      const user = await userCollection.findOne(query)
+      const isModerator = user?.role === "moderator"
+      if (!isModerator) {
+        return res.status(403).send({ message: "forbidden access" })
+      }
+      next()
+    }
 
     //Users related api
     app.get("/users", verifyToken, verifyAdmin ,async (req, res) => {
