@@ -38,6 +38,7 @@ async function run() {
       .collection("addScholarship")
     const paymentCollection = client.db("scholarshipDb").collection("payments")
     const reviewCollection = client.db("scholarshipDb").collection("reviews")
+    const moderatorAddSchoCollection = client.db("scholarshipDb").collection("addScholarship")
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -221,8 +222,8 @@ async function run() {
 
     app.delete(
       "/topScholarship/:id",
-      verifyToken,
-      verifyAdmin,
+    //   verifyToken,
+    //   verifyAdmin,
       async (req, res) => {
         const id = req.params.id
         const query = { _id: new ObjectId(id) }
@@ -425,6 +426,13 @@ async function run() {
       res.send(result)
     })
 
+
+    //modertor related api
+    app.post("/moderatorAddScholarship",  async (req, res) => {
+        const scholarship = req.body
+        const result = await moderatorAddSchoCollection.insertOne(scholarship)
+        res.send(result)
+      })
     // Send a ping to confirm a successful connection
     await client.db("admin").command({ ping: 1 })
     console.log(
