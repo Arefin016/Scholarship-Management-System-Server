@@ -306,6 +306,68 @@ async function run() {
       })
     })
 
+    //stats or analytics
+    app.get("/admin-stats", async (req, res) => {
+      const users = await userCollection.estimatedDocumentCount()
+      const applied = await submitCollection.estimatedDocumentCount()
+      const appliedScholarship =
+        await paymentCollection.estimatedDocumentCount()
+
+      // this is not the best way
+      const payments = await paymentCollection.find().toArray()
+      // console.log(payments)
+      const profits = payments.reduce(
+        (total, payment) => total + parseInt(payment.price),
+        0
+      )
+
+      res.send({
+        users,
+        applied,
+        appliedScholarship,
+        profits,
+      })
+    })
+
+    // using aggregate pipeline
+    app.get("/order-stats",verifyToken, verifyAdmin, async (req, res) => {
+      const result = await paymentCollection
+        .aggregate([
+          {
+            $unwind: "$applyIds",
+          },
+          {
+            $lookup: {
+              from: "submits",
+              localField: "applyIds",
+              foreignField: "applyId",
+              as: "menuItems",
+            }
+          },
+          {
+            $unwind: "$menuItems",
+          },
+          {
+            $group : {
+                _id: '$menuItems.scholarshipCategory',
+                quantity: {$sum: 1},
+                applicationFees: {$sum: '$menuItems.applicationFees'}
+            }
+          },
+          {
+            $project: {
+                _id: 0,
+                category: '$_id',
+                quantity: '$quantity',
+                applicationFees: '$applicationFees'
+            }
+          }
+        ])
+        .toArray()
+
+      res.send(result)
+    })
+
     app.post("/payments", async (req, res) => {
       const payment = req.body
       const paymentResult = await paymentCollection.insertOne(payment)
@@ -338,10 +400,10 @@ async function run() {
       res.send(result)
     })
 
-    app.patch('/addReview/:id', async(req, res) => {
-      const item = req.body;
-      const id = req.params.id;
-      const filter = {_id: new ObjectId(id)}
+    app.patch("/addReview/:id", async (req, res) => {
+      const item = req.body
+      const id = req.params.id
+      const filter = { _id: new ObjectId(id) }
       const updatedDoc = {
         $set: {
           ratingPoint: item.ratingPoint,
@@ -349,11 +411,11 @@ async function run() {
           scholarshipName: item.scholarshipName,
           universityName: item.universityName,
           reviewComment: item.reviewComment,
-          image: item.image
-        }
+          image: item.image,
+        },
       }
-      const result = await reviewCollection.updateOne(filter, updatedDoc);
-      res.send(result);
+      const result = await reviewCollection.updateOne(filter, updatedDoc)
+      res.send(result)
     })
 
     app.delete("/addReview/:id", verifyToken, async (req, res) => {
