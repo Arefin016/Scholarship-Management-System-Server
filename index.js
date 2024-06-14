@@ -39,6 +39,7 @@ async function run() {
     const paymentCollection = client.db("scholarshipDb").collection("payments")
     const reviewCollection = client.db("scholarshipDb").collection("reviews")
     const moderatorAddSchoCollection = client.db("scholarshipDb").collection("addScholarship")
+    const userInformationCollection = client.db("scholarshipDb").collection("paymentUserInformation")
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -423,6 +424,13 @@ async function run() {
       const id = req.params.id
       const query = { _id: new ObjectId(id) }
       const result = await reviewCollection.deleteOne(query)
+      res.send(result)
+    })
+
+    //After payment User Information
+    app.post("/paymentUserInformation", async (req, res) => {
+      const item = req.body
+      const result = await userInformationCollection.insertOne(item)
       res.send(result)
     })
 
