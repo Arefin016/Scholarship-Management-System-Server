@@ -25,7 +25,7 @@ const client = new MongoClient(uri, {
 async function run() {
   try {
     // Connect the client to the server	(optional starting in v4.7)
-    await client.connect()
+    // await client.connect()
 
     // cart = submit
     const topScholarshipCollection = client
@@ -38,8 +38,12 @@ async function run() {
       .collection("addScholarship")
     const paymentCollection = client.db("scholarshipDb").collection("payments")
     const reviewCollection = client.db("scholarshipDb").collection("reviews")
-    const moderatorAddSchoCollection = client.db("scholarshipDb").collection("addScholarship")
-    const userInformationCollection = client.db("scholarshipDb").collection("paymentUserInformation")
+    const moderatorAddSchoCollection = client
+      .db("scholarshipDb")
+      .collection("addScholarship")
+    const userInformationCollection = client
+      .db("scholarshipDb")
+      .collection("paymentUserInformation")
 
     //jwt related api
     app.post("/jwt", async (req, res) => {
@@ -223,8 +227,8 @@ async function run() {
 
     app.delete(
       "/topScholarship/:id",
-    //   verifyToken,
-    //   verifyAdmin,
+      //   verifyToken,
+      //   verifyAdmin,
       async (req, res) => {
         const id = req.params.id
         const query = { _id: new ObjectId(id) }
@@ -332,7 +336,7 @@ async function run() {
     })
 
     // using aggregate pipeline
-    app.get("/order-stats",verifyToken, verifyAdmin, async (req, res) => {
+    app.get("/order-stats", verifyToken, verifyAdmin, async (req, res) => {
       const result = await paymentCollection
         .aggregate([
           {
@@ -344,26 +348,26 @@ async function run() {
               localField: "applyIds",
               foreignField: "applyId",
               as: "menuItems",
-            }
+            },
           },
           {
             $unwind: "$menuItems",
           },
           {
-            $group : {
-                _id: '$menuItems.scholarshipCategory',
-                quantity: {$sum: 1},
-                applicationFees: {$sum: '$menuItems.applicationFees'}
-            }
+            $group: {
+              _id: "$menuItems.scholarshipCategory",
+              quantity: { $sum: 1 },
+              applicationFees: { $sum: "$menuItems.applicationFees" },
+            },
           },
           {
             $project: {
-                _id: 0,
-                category: '$_id',
-                quantity: '$quantity',
-                applicationFees: '$applicationFees'
-            }
-          }
+              _id: 0,
+              category: "$_id",
+              quantity: "$quantity",
+              applicationFees: "$applicationFees",
+            },
+          },
         ])
         .toArray()
 
@@ -434,18 +438,17 @@ async function run() {
       res.send(result)
     })
 
-
     //modertor related api
-    app.post("/moderatorAddScholarship",  async (req, res) => {
-        const scholarship = req.body
-        const result = await moderatorAddSchoCollection.insertOne(scholarship)
-        res.send(result)
-      })
+    app.post("/moderatorAddScholarship", async (req, res) => {
+      const scholarship = req.body
+      const result = await moderatorAddSchoCollection.insertOne(scholarship)
+      res.send(result)
+    })
     // Send a ping to confirm a successful connection
-    await client.db("admin").command({ ping: 1 })
-    console.log(
-      "Pinged your deployment. You successfully connected to MongoDB!"
-    )
+    // await client.db("admin").command({ ping: 1 })
+    // console.log(
+    //   "Pinged your deployment. You successfully connected to MongoDB!"
+    // )
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
